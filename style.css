@@ -1,0 +1,51 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    text-align: center;
+}
+
+#startScreen {
+    display: block;
+    margin-top: 50px;
+}
+
+#gameScreen {
+    display: none;
+    margin-top: 20px;
+}
+
+canvas {
+    border: 2px solid black;
+}
+
+#levelDisplay {
+    margin-top: 10px;
+    font-size: 20px;
+}
+
+#scoreDisplay {
+    margin-top: 10px;
+    font-size: 20px;
+}
+
+#timerDisplay {
+    margin-top: 10px;
+    font-size: 20px;
+}
+
+button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+}
+
+.level-selection {
+    margin-top: 20px;
+}
+
+#highScore {
+    margin-top: 10px;
+    font-size: 18px;
+    color: green;
+}
