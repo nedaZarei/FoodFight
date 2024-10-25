@@ -474,17 +474,23 @@ function endGame() {
     cancelAnimationFrame(gameLoop);
     clearInterval(timerInterval);
     
-    if (currentLevel === 1 && score > highScores.level1) {
-        highScores.level1 = score;
-        alert(`new High Score for Level 1! congratulations!`);
-    } else if (currentLevel === 2 && score > highScores.level2) {
-        highScores.level2 = score;
-        alert(`new High Score for Level 2! congratulations!`);
+    let message;
+    if (timeRemaining <= 0 && foods.length > 0) {
+        message = `YOU WON!\nFinal Score: ${score}`;
+    } else {
+        message = `GAME OVER!\nFinal Score: ${score}`;
     }
 
+    if (currentLevel === 1 && score > highScores.level1) {
+        highScores.level1 = score;
+        alert(`New High Score for Level 1! Congratulations!`);
+    } else if (currentLevel === 2 && score > highScores.level2) {
+        highScores.level2 = score;
+        alert(`New High Score for Level 2! Congratulations!`);
+    }
     saveHighScores();
-    
-    const playAgain = confirm(`GAME OVER!\nfinal score: ${score}\nwanna play again?`);
+
+    const playAgain = confirm(`${message}\nwanna play again?`);
     if (playAgain) {
         document.getElementById('gameScreen').style.display = 'none';
         document.getElementById('startScreen').style.display = 'block';
