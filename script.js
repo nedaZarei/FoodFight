@@ -68,6 +68,30 @@ function updateHighScoreDisplay() {
 function initializeGame() {
     canvas = document.getElementById('gameCanvas');
     ctx = canvas.getContext('2d');
+
+    canvas.addEventListener('click', (event) => {
+        if (isPaused) return;
+        console.log('click');
+        
+        const coords = getCanvasCoordinates(event);
+        
+        //loop through each worm and check for click collision
+        worms.forEach(worm => {
+            //distance from click to worm center
+            const dx = coords.x - worm.x;
+            const dy = coords.y - worm.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            //checking if click is within kill radius
+            if (distance <= KILL_RADIUS && !worm.fadeOut) {
+                worm.fadeOut = true;
+                worm.opacity = 1; //starting opacity is 1
+                score += WORM_TYPES[worm.type].score;
+                updateScore();
+            }
+        });
+    });
+
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
     loadHighScores();
@@ -410,29 +434,6 @@ function getCanvasCoordinates(event) {
         y: (event.clientY - rect.top) * scaleY
     };
 }
-
-canvas.addEventListener('click', (event) => {
-    if (isPaused) return;
-    
-    const coords = getCanvasCoordinates(event);
-    
-    //loop through each worm and check for click collision
-    worms.forEach(worm => {
-        //calculating distance from click to worm center
-        const dx = coords.x - worm.x;
-        const dy = coords.y - worm.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        //checking if click is within kill radius
-        if (distance <= KILL_RADIUS && !worm.fadeOut) {
-            worm.fadeOut = true;
-            //worms.splice(worm,1);
-            score += WORM_TYPES[worm.type].score;
-            updateScore();
-        }
-    });
-});
-
 
 function endGame() {
     cancelAnimationFrame(gameLoop);
