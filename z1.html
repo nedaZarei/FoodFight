@@ -9,7 +9,7 @@
 <body onload="initializeGame()">
     <div id="startScreen">
         <h1>Food Fight Frenzy</h1>
-        <p>click on the worms to defeat them before they reach the food!</p>
+        <p>click on the worms to kill them before they reach the food!</p>
         <div class="level-selection">
             <input type="radio" name="level" value="1" checked> Level 1
             <input type="radio" name="level" value="2"> Level 2
@@ -19,13 +19,22 @@
     </div>
 
     <div id="gameScreen">
+        <div class="info-bar">
+            <div class="info-section">
+                <span id="levelDisplay">Level: 1</span>
+            </div>
+            <div class="info-section">
+                <span id="scoreDisplay">Score: 0</span>
+            </div>
+            <div class="info-section">
+                <span id="timerDisplay">Time: 60</span>
+            </div>
+            <div class="info-section">
+                <button id="pauseButton" onclick="togglePause()">Pause</button>
+            </div>
+        </div>
         <canvas id="gameCanvas" width="600" height="400"></canvas>
-        <div id="levelDisplay">Level: 1</div>
-        <div id="scoreDisplay">Score: 0</div>
-        <div id="timerDisplay">Time: 60</div>
-        <button id="pauseButton" onclick="togglePause()">Pause</button>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>

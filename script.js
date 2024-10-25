@@ -6,7 +6,31 @@ const OBSTACLE_SIZE = 30;
 const KILL_RADIUS = 30;
 const GAME_DURATION = 60;
 const MIN_SPAWN_TIME = 1000; // 1 sec
-const MAX_SPAWN_TIME = 3000; // 3 secs
+const MAX_SPAWN_TIME = 3000; 
+
+const WORM_TYPES = {
+    BLACK: {
+        color: 'black',
+        speedL1: 150,
+        speedL2: 200,
+        score: 5,
+        probability: 0.3
+    },
+    RED: {
+        color: 'red',
+        speedL1: 75,
+        speedL2: 100,
+        score: 3,
+        probability: 0.3
+    },
+    ORANGE: {
+        color: 'orange',
+        speedL1: 60,
+        speedL2: 80,
+        score: 1,
+        probability: 0.4
+    }
+};
 
 let canvas, ctx;
 let gameLoop;
@@ -17,12 +41,12 @@ let currentLevel = 1;
 let worms = [];
 let foods = [];
 let obstacles = [];
+let timerInterval;  //to track timer interval
 let highScores = {
     level1: 0,
     level2: 0
 };
 
-//loading high scores from localStorage
 function loadHighScores() {
     const savedScores = localStorage.getItem('highScores');
     if (savedScores) {
@@ -31,7 +55,6 @@ function loadHighScores() {
     updateHighScoreDisplay();
 }
 
-//saving high scores to localStorage
 function saveHighScores() {
     localStorage.setItem('highScores', JSON.stringify(highScores));
 }
@@ -45,36 +68,38 @@ function updateHighScoreDisplay() {
 function initializeGame() {
     canvas = document.getElementById('gameCanvas');
     ctx = canvas.getContext('2d');
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
     loadHighScores();
     
-    //adding level selection change listener
     document.querySelectorAll('input[name="level"]').forEach(radio => {
         radio.addEventListener('change', updateHighScoreDisplay);
     });
 }
 
 class Worm {
-    constructor(x) {
+    constructor(x, type) {
         this.x = x;
         this.y = 0;
-        this.speed = currentLevel === 1 ? 80 : 100;
+        this.type = type;
         this.targetFood = null;
         this.fadeOut = false;
         this.opacity = 1;
         this.lastUpdateTime = performance.now();
+        this.speed = this.getSpeed();
+    }
+
+    getSpeed() {
+        return currentLevel === 1 ? WORM_TYPES[this.type].speedL1 : WORM_TYPES[this.type].speedL2;
     }
 
     update(deltaTime) {
-        const currentTime = performance.now();
-        deltaTime = currentTime - this.lastUpdateTime;
-        this.lastUpdateTime = currentTime;
-
-        if (this.fadeOut) {
-            this.opacity -= deltaTime / 500; //fade out over 500ms
+        if (this.fadeOut) { //fade out and remove if opacity is 0 or below
+            this.opacity -= deltaTime / 400;
             if (this.opacity <= 0) {
-                return false; //remove the worm when fully faded
+                return false; //worm should be removed from game
             }
-            return true; //keep the worm while fading
+            return true;
         }
 
         if (!this.targetFood || !foods.includes(this.targetFood)) {
@@ -96,7 +121,7 @@ class Worm {
                 this.eatFood();
             }
         }
-
+        //so that worms remain in canvas bounds
         this.x = Math.max(0, Math.min(this.x, CANVAS_WIDTH));
         this.y = Math.max(0, Math.min(this.y, CANVAS_HEIGHT));
 
@@ -136,14 +161,14 @@ class Worm {
     draw() {
         ctx.save();
         ctx.globalAlpha = this.opacity;
-        
-        //worm body
+
+        //drawing worms
         ctx.beginPath();
-        ctx.fillStyle = 'black';
+        ctx.fillStyle = WORM_TYPES[this.type].color;
         ctx.arc(this.x, this.y, WORM_RADIUS, 0, Math.PI * 2);
         ctx.fill();
         
-        //draw direction indicator if not fading out
+        //drawing direction indicator (if not fading out)
         if (!this.fadeOut && this.targetFood) {
             const angle = Math.atan2(
                 this.targetFood.y - this.y,
@@ -158,7 +183,7 @@ class Worm {
                 this.x + Math.cos(angle) * (WORM_RADIUS * 2),
                 this.y + Math.sin(angle) * (WORM_RADIUS * 2)
             );
-            ctx.strokeStyle = 'black';
+            ctx.strokeStyle = WORM_TYPES[this.type].color;
             ctx.stroke();
         }
         
@@ -167,6 +192,11 @@ class Worm {
 }
 
 function startGame() {
+    //clearing any existing timer
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+    
     currentLevel = parseInt(document.querySelector('input[name="level"]:checked').value);
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('gameScreen').style.display = 'block';
@@ -179,26 +209,24 @@ function startGame() {
     isPaused = false;
 
     setLevel();
-    
     initializeFoods();
-    
     initializeObstacles();
+    
+    updateScore();
+    updateTime();
     
     startGameLoop();
     startWormSpawner();
     startTimer();
-    updateScore();
 }
 
 function initializeFoods() {
-    //type 1 foods(blue)
-    const type1Count = Math.floor(Math.random() * 6) + 1; // 1-6 foods
+    const type1Count = Math.floor(Math.random() * 6) + 1;
     for (let i = 0; i < type1Count; i++) {
         addFood(1);
     }
     
-    //type 2 foods(red)
-    const type2Count = Math.floor(Math.random() * 4) + 1; // 1-4 foods
+    const type2Count = Math.floor(Math.random() * 4) + 1;
     for (let i = 0; i < type2Count; i++) {
         addFood(2);
     }
@@ -222,7 +250,7 @@ function addFood(type) {
 }
 
 function initializeObstacles() {
-    const obstacleCount = Math.floor(Math.random() * 4) + 1; // 1-4 obstacles
+    const obstacleCount = Math.floor(Math.random() * 4) + 1;
     
     for (let i = 0; i < obstacleCount; i++) {
         let x, y;
@@ -239,7 +267,6 @@ function initializeObstacles() {
 }
 
 function isValidPosition(x, y, size = FOOD_RADIUS * 2) {
-    //checking distance from other foods
     for (const food of foods) {
         const dx = food.x - x;
         const dy = food.y - y;
@@ -248,7 +275,6 @@ function isValidPosition(x, y, size = FOOD_RADIUS * 2) {
         }
     }
     
-    //checking distance from obstacles
     for (const obstacle of obstacles) {
         const dx = obstacle.x - x;
         const dy = obstacle.y - y;
@@ -272,6 +298,7 @@ function startGameLoop() {
             drawObstacles();
             drawFoods();
             
+             //only keep worms that are still visible
             worms = worms.filter(worm => {
                 const keepWorm = worm.update(deltaTime);
                 if (keepWorm) {
@@ -280,7 +307,7 @@ function startGameLoop() {
                 return keepWorm;
             });
             
-            if (foods.length === 0 || timeRemaining <= 0) {//game over
+            if (foods.length === 0 || timeRemaining <= 0) {
                 endGame();
                 return;
             }
@@ -293,30 +320,46 @@ function startGameLoop() {
     gameLoop = requestAnimationFrame(update);
 }
 
+function getRandomWormType() {
+    const rand = Math.random();
+    let total = 0;
+    for (const type in WORM_TYPES) {
+        total += WORM_TYPES[type].probability;
+        if (rand < total) {
+            return type;
+        }
+    }
+    return 'ORANGE'; //default type
+}
 
 function startWormSpawner() {
     function spawnWorm() {
-        if (!isPaused && foods.length > 0) {
-            //spawn worm at random x pos
+        if (!isPaused && foods.length > 0 && timeRemaining > 0) {
             const x = Math.random() * (CANVAS_WIDTH - 2 * WORM_RADIUS) + WORM_RADIUS;
-            worms.push(new Worm(x));
+            const wormType = getRandomWormType();
+            const newWorm = new Worm(x, wormType);
+            worms.push(newWorm);
             
-            //scheduling next spawn
             const delay = Math.random() * (MAX_SPAWN_TIME - MIN_SPAWN_TIME) + MIN_SPAWN_TIME;
             setTimeout(spawnWorm, delay);
         }
     }
     
-    spawnWorm();
+    //init spawn
+    setTimeout(spawnWorm, 1000); //after 1 sec
 }
 
 function startTimer() {
-    const timerInterval = setInterval(() => {
-        if (!isPaused) {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+    
+    timerInterval = setInterval(() => {
+        if (!isPaused && timeRemaining > 0) {
             timeRemaining--;
             updateTime();
             if (timeRemaining <= 0) {
-                clearInterval(timerInterval);
+                endGame();
             }
         }
     }, 1000);
@@ -341,12 +384,14 @@ function drawFoods() {
 function togglePause() {
     isPaused = !isPaused;
     const pauseButton = document.getElementById('pauseButton');
-    pauseButton.textContent = isPaused ? 'Play' : 'Pause';
+    pauseButton.textContent = isPaused ? 'Resume' : 'Pause';
 }
+
 function setLevel() {
     currentLevel = parseInt(document.querySelector('input[name="level"]:checked').value);
     document.getElementById('levelDisplay').textContent = `Level: ${currentLevel}`;
 }
+
 function updateScore() {
     document.getElementById('scoreDisplay').textContent = `Score: ${score}`;
 }
@@ -366,41 +411,32 @@ function getCanvasCoordinates(event) {
     };
 }
 
-//handling clicks
 canvas.addEventListener('click', (event) => {
     if (isPaused) return;
     
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    const coords = getCanvasCoordinates(event);
     
-    const clickX = (event.clientX - rect.left) * scaleX;
-    const clickY = (event.clientY - rect.top) * scaleY;
-    
-    let wormsKilled = false;
-    
-    //spread operator to create a copy of the worms array to safely iterate
-    [...worms].forEach(worm => {
-        //distance from click to worm center
-        const dx = clickX - worm.x;
-        const dy = clickY - worm.y;
-        const distanceSquared = dx * dx + dy * dy;
+    //loop through each worm and check for click collision
+    worms.forEach(worm => {
+        //calculating distance from click to worm center
+        const dx = coords.x - worm.x;
+        const dy = coords.y - worm.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
         
-        if (distanceSquared <= KILL_RADIUS * KILL_RADIUS) {
+        //checking if click is within kill radius
+        if (distance <= KILL_RADIUS && !worm.fadeOut) {
             worm.fadeOut = true;
-            worm.opacity = 1; //ensure opacity starts at 1
-            score += 8;
-            wormsKilled = true;
+            //worms.splice(worm,1);
+            score += WORM_TYPES[worm.type].score;
+            updateScore();
         }
     });
-    
-    if (wormsKilled) {
-        updateScore();
-    }
 });
+
 
 function endGame() {
     cancelAnimationFrame(gameLoop);
+    clearInterval(timerInterval);
     
     if (currentLevel === 1 && score > highScores.level1) {
         highScores.level1 = score;
@@ -410,16 +446,10 @@ function endGame() {
 
     saveHighScores();
     
-    if (currentLevel === 1 && foods.length != 0) {
-        currentLevel = 2;
-        startGame();
-    } else {
-        const playAgain = confirm(`GAME OVER!\nfinal score: ${score}\nwanna play again?`);
-        if (playAgain) {
-            document.getElementById('gameScreen').style.display = 'none';
-            document.getElementById('startScreen').style.display = 'block';
-            updateHighScoreDisplay();
-            //timeRemaining = GAME_DURATION;
-        }
+    const playAgain = confirm(`GAME OVER!\nfinal score: ${score}\nwanna play again?`);
+    if (playAgain) {
+        document.getElementById('gameScreen').style.display = 'none';
+        document.getElementById('startScreen').style.display = 'block';
+        updateHighScoreDisplay();
     }
 }
