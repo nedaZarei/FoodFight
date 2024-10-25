@@ -13,21 +13,21 @@ const WORM_TYPES = {
         color: 'black',
         speedL1: 150,
         speedL2: 200,
-        score: 5,
+        score: 10,
         probability: 0.3
     },
     RED: {
         color: 'red',
         speedL1: 75,
         speedL2: 100,
-        score: 3,
+        score: 5,
         probability: 0.3
     },
     ORANGE: {
         color: 'orange',
         speedL1: 60,
         speedL2: 80,
-        score: 1,
+        score: 3,
         probability: 0.4
     }
 };
@@ -68,6 +68,8 @@ function updateHighScoreDisplay() {
 function initializeGame() {
     canvas = document.getElementById('gameCanvas');
     ctx = canvas.getContext('2d');
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
 
     canvas.addEventListener('click', (event) => {
         if (isPaused) return;
@@ -92,8 +94,6 @@ function initializeGame() {
         });
     });
 
-    canvas.width = CANVAS_WIDTH;
-    canvas.height = CANVAS_HEIGHT;
     loadHighScores();
     
     document.querySelectorAll('input[name="level"]').forEach(radio => {
@@ -136,7 +136,42 @@ class Worm {
             const distance = Math.sqrt(dx * dx + dy * dy);
 
             const moveDistance = this.speed * deltaTime / 1000;
-            if (distance > 0) {
+
+            //collisions with obstacles
+            let isBlocked = false;
+            obstacles.forEach(obstacle => {
+            const obsCenterX = obstacle.x + OBSTACLE_SIZE / 2;
+            const obsCenterY = obstacle.y + OBSTACLE_SIZE / 2;
+
+            const distToObstacle = Math.sqrt((this.x - obsCenterX) ** 2 + (this.y - obsCenterY) ** 2);
+
+            //if the worm is close enough to the obstacle, it should avoid it
+            if (distToObstacle < OBSTACLE_SIZE / 2 + WORM_RADIUS) {
+                isBlocked = true;
+
+                //avoiding by moving perpendicular to it
+                const angleToObstacle = Math.atan2(obsCenterY - this.y, obsCenterX - this.x);
+                this.x -= Math.cos(angleToObstacle) * moveDistance;
+                this.y -= Math.sin(angleToObstacle) * moveDistance;
+            }
+        });
+
+            if (!isBlocked && distance > 0) {
+                //collisions between worms
+                worms.forEach(otherWorm => {
+                    if (otherWorm !== this && !otherWorm.fadeOut) {
+                        const otherWormSpeed = otherWorm.getSpeed();
+                        const otherDistance = Math.hypot(otherWorm.x - this.x, otherWorm.y - this.y);
+
+                        //slower worms wait if faster worm wants to pass
+                        if (otherWormSpeed > this.speed && otherDistance < WORM_RADIUS * 2) {
+                            if (this.x < otherWorm.x) this.x -= moveDistance / 2;
+                            else this.x += moveDistance / 2;
+                            return;
+                        }
+                    }
+                });
+                //updating position
                 this.x += (dx / distance) * moveDistance;
                 this.y += (dy / distance) * moveDistance;
             }
@@ -145,7 +180,7 @@ class Worm {
                 this.eatFood();
             }
         }
-        //so that worms remain in canvas bounds
+        //so that worms remain in canvas 
         this.x = Math.max(0, Math.min(this.x, CANVAS_WIDTH));
         this.y = Math.max(0, Math.min(this.y, CANVAS_HEIGHT));
 
@@ -441,8 +476,10 @@ function endGame() {
     
     if (currentLevel === 1 && score > highScores.level1) {
         highScores.level1 = score;
+        alert(`new High Score for Level 1! congratulations!`);
     } else if (currentLevel === 2 && score > highScores.level2) {
         highScores.level2 = score;
+        alert(`new High Score for Level 2! congratulations!`);
     }
 
     saveHighScores();
