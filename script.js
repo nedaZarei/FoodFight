@@ -50,13 +50,13 @@ let highScores = {
 function loadHighScores() {
     const savedScores = localStorage.getItem('highScores');
     if (savedScores) {
-        highScores = JSON.parse(savedScores);
+        highScores = JSON.parse(savedScores); //if a high score is found it's parsed back into an object 
     }
     updateHighScoreDisplay();
 }
 
 function saveHighScores() {
-    localStorage.setItem('highScores', JSON.stringify(highScores));
+    localStorage.setItem('highScores', JSON.stringify(highScores)); //object is serialized
 }
 
 function updateHighScoreDisplay() {
@@ -135,6 +135,8 @@ class Worm {
             const dy = this.targetFood.y - this.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
 
+            // distance an object should move during the current frame 
+            //considering its speed and the elapsed time since the last frame (deltaTime)
             const moveDistance = this.speed * deltaTime / 1000;
 
             //collisions with obstacles
@@ -145,7 +147,7 @@ class Worm {
 
             const distToObstacle = Math.sqrt((this.x - obsCenterX) ** 2 + (this.y - obsCenterY) ** 2);
 
-            //if the worm is close enough to the obstacle, it should avoid it
+            //if the worm is close enough to the obstacle it should avoid it
             if (distToObstacle < OBSTACLE_SIZE / 2 + WORM_RADIUS) {
                 isBlocked = true;
 
@@ -227,7 +229,7 @@ class Worm {
         ctx.arc(this.x, this.y, WORM_RADIUS, 0, Math.PI * 2);
         ctx.fill();
         
-        //drawing direction indicator (if not fading out)
+        //line at the edge of the worm’s circle in the direction of the food
         if (!this.fadeOut && this.targetFood) {
             const angle = Math.atan2(
                 this.targetFood.y - this.y,
